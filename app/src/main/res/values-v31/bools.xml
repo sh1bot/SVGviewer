@@ -1,0 +1,3 @@
+<resources>
+    <bool name="supports_svg_path_suffix">true</bool>
+</resources>
