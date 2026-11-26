@@ -14,8 +14,11 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 public final class ViewerActivity extends Activity {
     private static final String PAGE_URL = "https://svg-viewer.invalid/";
@@ -60,8 +63,14 @@ public final class ViewerActivity extends Activity {
         viewer.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if (request.isForMainFrame() && PAGE_URL.equals(url)) {
+                    return new WebResourceResponse("text/html", "UTF-8",
+                            new ByteArrayInputStream(PAGE.getBytes(StandardCharsets.UTF_8)));
+                }
+
                 // Render the document as an image so SVG scripts and external resources stay disabled.
-                if (IMAGE_URL.equals(request.getUrl().toString())) {
+                if (!request.isForMainFrame() && IMAGE_URL.equals(url)) {
                     try {
                         InputStream svg = getContentResolver().openInputStream(uri);
                         if (svg != null) {
@@ -76,11 +85,12 @@ public final class ViewerActivity extends Activity {
                         }
                     });
                 }
-                return new WebResourceResponse("text/plain", "UTF-8", null);
+                return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found",
+                        Collections.emptyMap(), new ByteArrayInputStream(new byte[0]));
             }
         });
         setContentView(viewer);
-        viewer.loadDataWithBaseURL(PAGE_URL, PAGE, "text/html", "UTF-8", null);
+        viewer.loadUrl(PAGE_URL);
     }
 
     @Override
